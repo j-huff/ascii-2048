@@ -7,6 +7,9 @@
 #include <cstdlib>
 #include <map>
 #include <cmath>
+#include <ctime>
+#include <chrono>
+#include <thread>
 
 using namespace std;
 
@@ -31,25 +34,64 @@ bool IncrementVecBase(vector<int>& vals,int amount,int base){
 	return false;
 };
 
+class Timer
+{
+    // alias our types for simplicity
+    using clock             = std::chrono::system_clock;
+    using time_point_type   = std::chrono::time_point < clock, std::chrono::milliseconds > ;
+public:
+    // default constructor that stores the start time
+    Timer()
+    {
+        start_time = std::chrono::time_point_cast<std::chrono::milliseconds>(clock::now());
+    }
+
+    void start(){
+    	start_time = std::chrono::time_point_cast<std::chrono::milliseconds>(clock::now());
+    }
+
+    // gets the time elapsed from construction.
+    long /*milliseconds*/ getTimePassed()
+    {
+        // get the new time
+        auto end = clock::now();
+
+        // return the difference of the times
+        return (end - start_time).count();
+    }
+
+private:
+    time_point_type start_time;
+};
+
+
+bool kbhit(void)
+{
+    int ch = getch();
+    if (ch != ERR) {
+        ungetch(ch);
+        return true;
+    } else {
+        return false;
+    }
+}
+
 class Game{
 public:
-	enum states{MAIN_MENU, READY, PLAYING, GAME_OVER};
+	enum State{MAIN_MENU, READY, PLAYING, GAME_OVER, WIN};
 
 	Game(int width_, int height_){
 		width = width_;
 		height = height_;
-		tiles = vector<vector<int> > (height, vector<int>(width, -1));
 
 		margin_top = 6;
 		margin_left = 4;
-		horz_spacing = 4;
+		horz_spacing = 5;
 		vert_spacing = 2;
 
 		init_colors();
 
-		score = 0;
-		tiles = add_random(tiles);
-		prev_tiles = tiles;
+		reset();
 	};
 
 	void reset(){
@@ -57,6 +99,7 @@ public:
 		score = 0;
 		tiles = add_random(tiles);
 		prev_tiles = tiles;
+		state = READY;
 	}
 
 	void init_colors(){
@@ -83,8 +126,8 @@ public:
 		init_pair(9, 18, COLOR_BLACK);
 		init_pair(10, 19, COLOR_BLACK);
 		init_pair(11, 20, COLOR_BLACK);
-		init_pair(11, 21, COLOR_BLACK);
-		init_pair(11, 22, COLOR_BLACK);
+		init_pair(12, 21, COLOR_BLACK);
+		init_pair(13, 22, COLOR_BLACK);
 	}
 
 	int get_color_pair(int row, int col, int num){
@@ -95,43 +138,111 @@ public:
 		int ch;
 		bool done = false;
 		string str;
-		while(!done){
+		while(!quit){
 			display();
-			ch = getch();
-			// cout << ch << endl;
-			// str = to_string(ch);
-			//mvprintw(2,2,"%d",ch);
-			//mvaddch(1,2,ch);
-			if(ch == 'q'){
-				done = true;
+			run_timed();
+		}
+		
+		// while(!done){
+		// 	display();
+		// 	ch = getch();
+		// 	// cout << ch << endl;
+		// 	// str = to_string(ch);
+		// 	//mvprintw(2,2,"%d",ch);
+		// 	//mvaddch(1,2,ch);
+		// 	if(ch == 'q'){
+		// 		done = true;
+		// 	}
+		// 	else if(ch == 'n'){
+		// 		tiles = add_random(tiles);
+		// 	}
+		// 	else if(ch == 'z'){
+		// 		undo();
+		// 	}
+		// 	else if(ch == 'r'){
+		// 		reset();
+		// 	}
+		// 	else if(ch == KEY_UP){
+		// 		move(UP);
+		// 		//mvprintw(0,2,"KEY_UP");
+		// 	}
+		// 	else if(ch == KEY_DOWN){
+		// 		move(DOWN);
+		// 		//mvprintw(0,2,"KEY_DOWN");
+		// 	}
+		// 	else if(ch == KEY_LEFT){
+		// 		move(LEFT);
+		// 		//mvprintw(0,2,"KEY_LEFT");
+		// 	}
+		// 	else if(ch == KEY_RIGHT){
+		// 		move(RIGHT);
+		// 		//mvprintw(0,2,"KEY_RIGHT");
+		// 	}
+		// }
+	};
+
+	void run_timed(){
+		bool done = false;
+		started = false;
+		string str;
+		while(!done){
+			std::this_thread::sleep_for (std::chrono::milliseconds(1));
+			display();
+			while(kbhit()){
+				display();
+				
+				if(state == READY){
+					timer.start();
+					state = PLAYING;
+				}
+				int ch = getch();
+				move_time = timer.getTimePassed();
+
+				if(ch == 'q'){
+					quit = true;
+					done = true;
+				}
+				else if(ch == 'n'){
+					tiles = add_random(tiles);
+				}
+				else if(ch == 'z'){
+					undo();
+				}
+				else if(ch == 'r'){
+					reset();
+					done = true;
+				}
+				else if(ch == KEY_UP){
+					move(UP);
+				}
+				else if(ch == KEY_DOWN){
+					move(DOWN);
+				}
+				else if(ch == KEY_LEFT){
+					move(LEFT);
+				}
+				else if(ch == KEY_RIGHT){
+					move(RIGHT);
+				}
 			}
-			else if(ch == 'n'){
-				tiles = add_random(tiles);
-			}
-			else if(ch == 'z'){
-				undo();
-			}
-			else if(ch == 'r'){
-				reset();
-			}
-			else if(ch == KEY_UP){
-				move(UP);
-				//mvprintw(0,2,"KEY_UP");
-			}
-			else if(ch == KEY_DOWN){
-				move(DOWN);
-				//mvprintw(0,2,"KEY_DOWN");
-			}
-			else if(ch == KEY_LEFT){
-				move(LEFT);
-				//mvprintw(0,2,"KEY_LEFT");
-			}
-			else if(ch == KEY_RIGHT){
-				move(RIGHT);
-				//mvprintw(0,2,"KEY_RIGHT");
+
+			if(state == PLAYING && check_win()){
+				state = WIN;
+				final_time = move_time;
 			}
 		}
-	};
+	}
+
+	bool check_win(){
+		for(int i = 0; i < tiles.size(); i++){
+			for(int j = 0; j < tiles[0].size(); j++){
+				if(tiles[i][j] == 2048){
+					return true;
+				}
+			}
+		}
+		return false;
+	}
 
 	void move(direction dir){
 		vector<vector<int> >new_tiles;
@@ -286,15 +397,33 @@ public:
 	}
 
 	void display(){
+
 		display_board();
 		display_tiles();
 		display_score();
+		display_time();
 	};
 
 	void display_score()
 	{
 		mvprintw(margin_top-2, margin_left, "score:               ");
 		mvprintw(margin_top-2, margin_left+7, "%d",score);
+	};
+
+	void display_time()
+	{
+		time_t now = time(0);
+		mvprintw(margin_top-4, margin_left, " time:              ");
+		long ms = 1000000000;
+		long t = timer.getTimePassed();
+		if(state == PLAYING){
+			mvprintw(margin_top-4, margin_left+7, "%ld:%ld:%ld", (t/ms)/60,(t/ms)%60,(t%ms)/10000000);
+		}else if(state == WIN){
+			t = final_time;
+			mvprintw(margin_top-4, margin_left+7, "%ld:%ld:%ld", (t/ms)/60,(t/ms)%60,(t%ms)/10000000);
+		}else{
+			mvprintw(margin_top-4, margin_left+7, "0:0:0");
+		}
 	};
 
 	void display_board(){
@@ -378,6 +507,13 @@ public:
 	int horz_spacing;
 	int vert_spacing;
 
+	bool started;
+	Timer timer;
+	long move_time;
+	long final_time;
+	bool quit;
+	State state;
+
 	int score;
 	vector<vector<int> > tiles;
 	vector<vector<int> > prev_tiles;
@@ -450,10 +586,18 @@ public:
 
 int main(){
 	initscr();
+	
 	start_color();
 	noecho();
-	curs_set(0);
+	raw();
 	keypad(stdscr, TRUE);
+	nodelay(stdscr, TRUE);
+	scrollok(stdscr, TRUE);
+	curs_set(0);
+	
+	while(kbhit()){
+		getch();
+	}
 	Game game(4,4);
 	game.run();
 
