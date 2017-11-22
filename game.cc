@@ -73,6 +73,7 @@ void Game::init_colors(){
 	init_color(CSTART+19,0,1000,1000);
 	init_color(CSTART+20,0,500,1000);
 	init_color(CSTART+21,0,0,1000);
+
 	init_pair(CSTART+1, CSTART+10, COLOR_BLACK);
 	init_pair(CSTART+2, CSTART+11, COLOR_BLACK);
 	init_pair(CSTART+3, CSTART+12, COLOR_BLACK);
@@ -86,10 +87,14 @@ void Game::init_colors(){
 	init_pair(CSTART+11, CSTART+20, COLOR_BLACK);
 	init_pair(CSTART+12, CSTART+21, COLOR_BLACK);
 	init_pair(CSTART+13, CSTART+22, COLOR_BLACK);
+	max_color_pair = 13;
 
 }
 
 int Game::get_color_pair(int row, int col, int num){
+	int color_pair = log2(num);
+	if(color_pair > max_color_pair)
+		color_pair = max_color_pair;
 	return CSTART+log2(num);
 }
 
@@ -185,9 +190,13 @@ void Game::run_timed(){
 			}
 		}
 
-		if(state == PLAYING && check_win()){
-			state = WIN;
-			final_time = move_time;
+		if(state == PLAYING){
+			if(check_win()){
+				state = WIN;
+				final_time = move_time;
+			}else if(check_game_over(tiles)){
+				state = GAME_OVER;
+			}
 		}
 	}
 }
@@ -226,6 +235,24 @@ void Game::move(direction dir){
 		score = new_score;
 		tiles = add_random(tiles);
 	}
+}
+
+bool Game::check_game_over(const vector<vector<int> > tiles){
+	vector<vector<int> >new_tiles;
+	int new_score;
+	move_left(tiles, score, new_tiles, new_score);
+	if(!tiles_equal(tiles, new_tiles))
+		return false;
+	move_right(tiles, score, new_tiles, new_score);
+	if(!tiles_equal(tiles, new_tiles))
+		return false;
+	move_up(tiles, score, new_tiles, new_score);
+	if(!tiles_equal(tiles, new_tiles))
+		return false;
+	move_down(tiles, score, new_tiles, new_score);
+	if(!tiles_equal(tiles, new_tiles))
+		return false;
+	return true;
 }
 
 bool Game::tiles_equal(const vector<vector<int> > &a, const vector<vector<int> > &b){
@@ -361,6 +388,18 @@ void Game::display(){
 	display_tiles();
 	display_score();
 	display_time();
+	display_game_over();
+
+}
+
+
+void Game::display_game_over()
+{
+	if(state == GAME_OVER)
+		mvprintw(margin_top + vert_spacing*height + 2, margin_left, "GAME OVER");
+	else
+		mvprintw(margin_top + vert_spacing*height + 2, margin_left, "         ");
+
 }
 
 void Game::display_score()
@@ -375,7 +414,7 @@ void Game::display_time()
 	mvprintw(margin_top-4, margin_left, " time:              ");
 	long ms = 1000000000;
 	long t = timer.getTimePassed();
-	if(state == PLAYING){
+	if(state == PLAYING || state == GAME_OVER){
 		mvprintw(margin_top-4, margin_left+7, "%ld:%ld:%ld", (t/ms)/60,(t/ms)%60,(t%ms)/10000000);
 	}else if(state == WIN){
 		t = final_time;

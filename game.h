@@ -69,12 +69,11 @@ public:
 	bool tiles_equal(const vector<vector<int> > &a, const vector<vector<int> > &b);
 
 	void move_left(const vector<vector<int> > &tiles, const int &score, vector<vector<int> > &new_tiles, int &new_score);
-
 	void move_right(const vector<vector<int> > &tiles, const int &score, vector<vector<int> > &new_tiles, int &new_score);
-
 	void move_up(const vector<vector<int> > &tiles, const int &score, vector<vector<int> > &new_tiles, int &new_score);
-
 	void move_down(const vector<vector<int> > &tiles, const int &score, vector<vector<int> > &new_tiles, int &new_score);
+
+	bool check_game_over(const vector<vector<int> > tiles);
 
 	// TODO: deal with prev score
 	void undo();
@@ -89,6 +88,9 @@ public:
 
 	void display_tiles();
 
+	void display_game_over();
+
+
 	vector<vector<int> > add_random(vector<vector<int> > tiles);
 
 	map<int, int> color_lookup;
@@ -97,6 +99,8 @@ public:
 	int margin_left;
 	int horz_spacing;
 	int vert_spacing;
+
+	short max_color_pair;
 
 	bool started;
 	Timer timer;
